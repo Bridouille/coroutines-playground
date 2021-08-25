@@ -3,50 +3,68 @@ package com.coroutines.playground.main
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.viewModels
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import com.coroutines.playground.R
 import com.google.android.material.textfield.TextInputEditText
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import timber.log.Timber
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     val mainVm: MainVM by viewModels()
 
-    lateinit var getCharBtn: Button
-    lateinit var editText: TextInputEditText
-    lateinit var queryRes: TextView
+    lateinit var fetchStatusBtn: Button
+    lateinit var loader: ProgressBar
+    lateinit var errorTv: TextView
+    lateinit var listRv: RecyclerView
+
+    private val rvAdapter = StatusRVAdapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        getCharBtn = findViewById(R.id.cancel_previous)
-        getCharBtn.setOnClickListener {
-            mainVm.performAction(MainEvent.LoadButtonClicked)
-        }
-        editText = findViewById(R.id.edit_text)
-        editText.doAfterTextChanged { text ->
-            mainVm.performAction(MainEvent.TextChanged(text.toString()))
-        }
+        fetchStatusBtn = findViewById(R.id.fetch_status)
+        loader = findViewById(R.id.loader)
+        errorTv = findViewById(R.id.error)
+        listRv = findViewById(R.id.status_list)
 
-        queryRes = findViewById(R.id.query_result)
+        listRv.apply {
+            adapter = rvAdapter
+        }
 
         lifecycleScope.launchWhenCreated {
-            mainVm.observeState().collect(::render)
+            mainVm.observeState().onEach(::render).launchIn(lifecycleScope)
         }
     }
 
     private fun render(vs: MainVs) {
-        getCharBtn.text = if (vs.isLoading) {
-            "Loading ..."
-        } else {
-            "Launch unique network request!"
+        Timber.d("vs=$vs")
+        loader.isVisible = vs.isLoading
+        errorTv.isVisible = vs.error != null
+        errorTv.text = vs.error
+        listRv.isVisible = vs.error == null && !vs.isLoading
+        vs.status?.let {
+            rvAdapter.submitList(it.components)
         }
-        queryRes.text = vs.query
+
+        fetchStatusBtn.text = if (vs.isLoading) {
+            "Cancel request"
+        } else {
+            "Fetch statuses"
+        }
+        fetchStatusBtn.setOnClickListener {
+            mainVm.performAction(MainEvent.FetchButtonClicked(vs.isLoading))
+        }
     }
 }

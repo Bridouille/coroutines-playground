@@ -1,7 +1,7 @@
 package com.coroutines.playground.di
 
 import com.coroutines.playground.BuildConfig
-import com.coroutines.playground.network.RickAndMortyEndpoint
+import com.coroutines.playground.network.DigitalOceanStatusEndpoint
 import com.squareup.moshi.Moshi
 import dagger.Module
 import dagger.Provides
@@ -18,7 +18,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://rickandmortyapi.com/"
+    private const val BASE_URL = "https://status.digitalocean.com/"
 
     @Provides @Singleton
     fun providesMoshi() = Moshi.Builder().build()
@@ -49,5 +49,5 @@ object NetworkModule {
     }
 
     @Provides @Singleton
-    fun providesRickAndMortyEndpoint(retrofit: Retrofit) = retrofit.create(RickAndMortyEndpoint::class.java)
+    fun providesDigitalOceanStatusEndpoint(retrofit: Retrofit) = retrofit.create(DigitalOceanStatusEndpoint::class.java)
 }
